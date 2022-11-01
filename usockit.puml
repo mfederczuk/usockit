@@ -1,0 +1,26 @@
+/'
+	Copyright (c) 2022 Michael Federczuk
+	SPDX-License-Identifier: CC-BY-SA-4.0
+'/
+
+@startuml usockit
+
+skinparam componentStyle rectangle
+
+
+component [Child Program] as child
+component [""usockit"" Server] as server
+
+cloud "UNIX Domain Socket" as unix_socket
+
+component [""usockit"" Client] as client
+component [Terminal] as terminal
+
+
+child <- server : """"stdin""""
+server <-- unix_socket
+
+unix_socket <-- client
+client <- terminal : """"stdin""""
+
+@enduml
