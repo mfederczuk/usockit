@@ -54,7 +54,7 @@ struct usockit_cli {
 	 *
 	 * Is uninitialized if `child_program` is `false`.
 	 */
-	const_cstr_t* child_program_argv;
+	cstr_t* child_program_argv;
 };
 
 
@@ -84,7 +84,7 @@ static inline ret_status_t usockit_cli_init_child_program_argv(struct usockit_cl
 	cross_support_attr_warn_unused_result;
 
 cross_support_nodiscard
-static inline ret_status_t usockit_cli_append_child_program_arg(struct usockit_cli* cli, const_cstr_t arg)
+static inline ret_status_t usockit_cli_append_child_program_arg(struct usockit_cli* cli, cstr_t arg)
 	cross_support_attr_always_inline
 	cross_support_attr_nonnull_all
 	cross_support_attr_warn_unused_result;
@@ -133,7 +133,7 @@ static inline ret_status_t usockit_cli_init_child_program_argv(struct usockit_cl
 	assert(cli != cross_support_nullptr);
 
 	errno = 0;
-	const_cstr_t* const tmp = malloc(sizeof(*(cli->child_program_argv)) * USOCKIT_CLI_CHILD_PROGRAM_ARGV_INIT_CAPACITY);
+	cstr_t* const tmp = malloc(sizeof(*(cli->child_program_argv)) * USOCKIT_CLI_CHILD_PROGRAM_ARGV_INIT_CAPACITY);
 
 	cross_support_if_unlikely((tmp == cross_support_nullptr) || (errno != 0)) {
 		return RET_STATUS_FAILURE;
@@ -151,7 +151,7 @@ static inline ret_status_t usockit_cli_init_child_program_argv(struct usockit_cl
 
 static inline ret_status_t usockit_cli_append_child_program_arg(
 	struct usockit_cli* const cli,
-	const const_cstr_t arg
+	const cstr_t arg
 ) {
 	assert(cli != cross_support_nullptr);
 	assert(arg != cross_support_nullptr);
@@ -164,7 +164,7 @@ static inline ret_status_t usockit_cli_append_child_program_arg(
 			(size_t)((double)(cli->child_program_argv_capacity) * USOCKIT_CLI_CHILD_PROGRAM_ARGV_GROWTH_FACTOR);
 
 		errno = 0;
-		const_cstr_t* const tmp =
+		cstr_t* const tmp =
 			realloc(
 				cli->child_program_argv,
 				sizeof(*(cli->child_program_argv)) * new_capacity
@@ -196,7 +196,7 @@ static inline ret_status_t usockit_cli_shrink_to_fit_child_program_argv(struct u
 	}
 
 	errno = 0;
-	const_cstr_t* const tmp =
+	cstr_t* const tmp =
 		realloc(
 			cli->child_program_argv,
 			sizeof(*(cli->child_program_argv)) * fitted_capacity
