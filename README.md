@@ -35,6 +35,37 @@ and reopened without influencing the original program.
 
 [UNIX domain socket]: <https://en.wikipedia.org/wiki/Unix_domain_socket> "Unix domain socket - Wikipedia"
 
+## Usage ##
+
+```shell
+usockit console_socket -- prog arg1 arg2 ... argN
+```
+
+This will create a new UNIX domain socket called `console_socket` and execute the program `prog` with the arguments
+`arg1`, `arg2`, `...` and `argN`.  
+The child process' standard input is controlled by the `usockit` server, to send data to it, a `usockit` client must be
+connected to the same socket:
+
+```shell
+usockit console_socket
+```
+
+The `usockit` binary will know that this is supposed to be a client and not a server since there is no command specified.
+
+The client will now read from **its** standard input until end-of-file and will transfer all data to the socket, where
+the server will pick it up and forward it to the child program.
+
+## Download & Installation ##
+
+Download & installation must be done manually by cloning this repository and building from source:
+
+```sh
+git clone 'https://github.com/mfederczuk/usockit.git' -o 'usockit' &&
+	cd 'usockit' &&
+	make build_type=release &&
+	sudo make build_type=release install
+```
+
 ## Contributing ##
 
 Read through the [Contribution Guidelines](CONTRIBUTING.md) if you want to contribute to this project.
