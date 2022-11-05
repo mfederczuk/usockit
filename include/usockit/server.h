@@ -12,6 +12,8 @@
 
 enum usockit_server_ret_status {
 	USOCKIT_SERVER_RET_STATUS_SUCCESS,
+	USOCKIT_SERVER_RET_STATUS_OUT_OF_MEMORY,
+	USOCKIT_SERVER_RET_STATUS_UNKNOWN, // TODO: remove this
 };
 
 cross_support_nodiscard

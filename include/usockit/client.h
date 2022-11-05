@@ -11,6 +11,7 @@
 
 enum usockit_client_ret_status {
 	USOCKIT_CLIENT_RET_STATUS_SUCCESS,
+	USOCKIT_CLIENT_RET_STATUS_UNKNOWN, // TODO: remove this
 };
 
 cross_support_nodiscard

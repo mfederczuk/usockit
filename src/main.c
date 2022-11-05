@@ -146,6 +146,9 @@ static inline int main_client(const const_cstr_t socket_pathname) {
 		case(USOCKIT_CLIENT_RET_STATUS_SUCCESS): {
 			return 0;
 		}
+		case(USOCKIT_CLIENT_RET_STATUS_UNKNOWN): {
+			return 125;
+		}
 		// TODO: client error handling
 		default: {
 			cross_support_unreachable();
@@ -176,6 +179,9 @@ static inline int main_server(const const_cstr_t argv0, struct usockit_cli* cons
 	switch(server_ret_status) {
 		case(USOCKIT_SERVER_RET_STATUS_SUCCESS): {
 			return 0;
+		}
+		case(USOCKIT_SERVER_RET_STATUS_UNKNOWN): {
+			return 125;
 		}
 		// TODO: server error handling
 		default: {

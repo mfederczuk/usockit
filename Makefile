@@ -50,7 +50,7 @@ $(object_file_paths): build/$(build_type)/obj/%.o: $(header_file_paths) src/%.c
 
 build/$(build_type)/bin/artifacts/usockit: $(object_file_paths)
 	mkdir -p $(@D)
-	$(strip $(CC) $(CFLAGS) $^ -o $@)
+	$(strip $(CC) $(CFLAGS) $^ -o $@ -pthread)
 
 usockit: build/$(build_type)/bin/artifacts/usockit
 	ln -sf $< $@
