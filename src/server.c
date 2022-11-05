@@ -239,7 +239,7 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 	errno = 0;
 	struct usockit_server_child_ready_info* const child_ready_info =
 		malloc(sizeof(struct usockit_server_child_ready_info));
-	cross_support_if_unlikely((child_ready_info == cross_support_nullptr) || (errno != 0)) {
+	cross_support_if_unlikely(child_ready_info == cross_support_nullptr) {
 		// TODO: malloc(3) error handling
 		perror("malloc(3)");
 		return USOCKIT_SERVER_RET_STATUS_UNKNOWN;
@@ -273,7 +273,7 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 	errno = 0;
 	struct usockit_server_thread_routine_child_wait_arg* const child_wait_thread_routine_arg =
 		calloc(1, sizeof(struct usockit_server_thread_routine_child_wait_arg));
-	cross_support_if_unlikely((child_wait_thread_routine_arg == cross_support_nullptr) || (errno != 0)) {
+	cross_support_if_unlikely(child_wait_thread_routine_arg == cross_support_nullptr) {
 		errno_push();
 		pthread_cond_destroy(&(child_ready_info->cond));
 		pthread_mutex_destroy(&(child_ready_info->mutex));
@@ -287,7 +287,7 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 
 	errno = 0;
 	child_wait_thread_routine_arg->child_pid_ptr = malloc(sizeof(*(child_wait_thread_routine_arg->child_pid_ptr)));
-	cross_support_if_unlikely((child_wait_thread_routine_arg->child_pid_ptr == cross_support_nullptr) || (errno != 0)) {
+	cross_support_if_unlikely(child_wait_thread_routine_arg->child_pid_ptr == cross_support_nullptr) {
 		errno_push();
 
 		free(child_wait_thread_routine_arg);
@@ -309,7 +309,7 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 	errno = 0;
 	struct usockit_server_thread_routine_accept_arg* const accept_thread_routine_arg =
 		calloc(1, sizeof(struct usockit_server_thread_routine_accept_arg));
-	cross_support_if_unlikely((accept_thread_routine_arg == cross_support_nullptr) || (errno != 0)) {
+	cross_support_if_unlikely(accept_thread_routine_arg == cross_support_nullptr) {
 		errno_push();
 
 		free(child_wait_thread_routine_arg->child_pid_ptr);
@@ -328,8 +328,7 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 
 	errno = 0;
 	accept_thread_routine_arg->child_stdin_fd_ptr = malloc(sizeof(*(accept_thread_routine_arg->child_stdin_fd_ptr)));
-	cross_support_if_unlikely((accept_thread_routine_arg->child_stdin_fd_ptr == cross_support_nullptr) ||
-	                          (errno != 0)) {
+	cross_support_if_unlikely(accept_thread_routine_arg->child_stdin_fd_ptr == cross_support_nullptr) {
 		errno_push();
 
 		free(accept_thread_routine_arg);
@@ -795,7 +794,7 @@ static inline enum usockit_server_ret_status usockit_server_check_socket_pathnam
 	errno = 0;
 	const cstr_t socket_pathname_dup = strdup(socket_pathname);
 
-	cross_support_if_unlikely((socket_pathname_dup == cross_support_nullptr) || (errno != 0)) {
+	cross_support_if_unlikely(socket_pathname_dup == cross_support_nullptr) {
 		return USOCKIT_SERVER_RET_STATUS_OUT_OF_MEMORY;
 	}
 

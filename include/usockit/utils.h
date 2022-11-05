@@ -67,7 +67,7 @@ static inline ret_status_t write_all(const int fd, const void* const buf, const 
 		errno = 0;
 		const ssize_t tmp_writec = write(fd, ((const unsigned char*)(buf) + total_writec), (count - total_writec));
 
-		if((tmp_writec < 0) || (errno != 0)) {
+		if(tmp_writec < 0) {
 			return RET_STATUS_FAILURE;
 		}
 
