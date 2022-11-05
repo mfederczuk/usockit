@@ -172,7 +172,9 @@ static inline int main_server(const const_cstr_t argv0, struct usockit_cli* cons
 	const enum usockit_server_ret_status server_ret_status =
 		usockit_server(
 			cli->socket_pathname,
+			#ifndef NDEBUG
 			cli->child_program_argv_size,
+			#endif
 			cli->child_program_argv
 		);
 

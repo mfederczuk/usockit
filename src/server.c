@@ -140,7 +140,9 @@ static inline enum usockit_server_ret_status usockit_server_setup_socket(const_c
 
 enum usockit_server_ret_status usockit_server(
 	const const_cstr_t socket_pathname,
-	const size_t child_program_argc, // TODO: we don't really need this parameter
+	#ifndef NDEBUG
+	const size_t child_program_argc,
+	#endif
 	const cstr_t* const child_program_argv
 ) {
 	#ifndef NDEBUG

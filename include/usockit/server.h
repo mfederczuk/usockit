@@ -18,9 +18,15 @@ enum usockit_server_ret_status {
 
 cross_support_nodiscard
 extern enum usockit_server_ret_status usockit_server(const_cstr_t socket_pathname,
+                                                     #ifndef NDEBUG
                                                      size_t child_program_argc,
+                                                     #endif
                                                      const cstr_t* child_program_argv)
+	                                                     #ifndef NDEBUG
 	                                                     cross_support_attr_nonnull(1, 3)
+	                                                     #else
+	                                                     cross_support_attr_nonnull_all
+	                                                     #endif
 	                                                     cross_support_attr_warn_unused_result;
 
 #endif /* USOCKIT_SERVER_H */
