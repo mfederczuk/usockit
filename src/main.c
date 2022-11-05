@@ -14,6 +14,7 @@
 #include <usockit/server.h>
 #include <usockit/shared.h>
 #include <usockit/utils.h>
+#include <usockit/version.h>
 
 #define USAGE_STRING_SERVER "<socket_path> -- <program> [<args>...]"
 #define USAGE_STRING_CLIENT "<socket_path>"
@@ -80,6 +81,13 @@ int main(const int argc, const cstr_t* const argv) {
 			}
 
 			continue;
+		}
+
+		if(strequ(arg, "--version")) {
+			fputs(USOCKIT_VERSION_NAME "\n", stderr);
+
+			usockit_cli_destroy_definitely_no_init_child_program_argv(&cli);
+			return 0;
 		}
 
 		cross_support_if_unlikely(cli.socket_pathname != cross_support_nullptr) {

@@ -35,6 +35,8 @@ CFLAGS = $(EXTRA_CFLAGS) -std=c11 $(optimization_flag) \
 
 
 override header_file_paths != find include -mindepth 1 -type f -name '*.h'
+override header_file_paths += include/usockit/version.h
+
 override source_file_paths != find src -mindepth 1 -type f -name '*.c'
 override object_file_paths := $(source_file_paths:src/%.c=build/$(build_type)/obj/%.o)
 
@@ -43,6 +45,22 @@ override object_file_paths := $(source_file_paths:src/%.c=build/$(build_type)/ob
 
 all: usockit
 .PHONY: all
+
+include/usockit/version.h: version_name.txt
+	mkdir -p $(@D)
+	{ \
+		printf '/*\n'                                                           && \
+		printf ' * Generated at %s\n' "$$(date)"                                && \
+		printf ' * DO NOT EDIT!\n'                                              && \
+		printf ' */\n'                                                          && \
+		printf '\n'                                                             && \
+		printf '#ifndef USOCKIT_VERSION_H\n'                                    && \
+		printf '#define USOCKIT_VERSION_H\n'                                    && \
+		printf '\n'                                                             && \
+		printf '#define USOCKIT_VERSION_NAME  "%s"\n' "$$(cat version_name.txt)" && \
+		printf '\n'                                                             && \
+		printf '#endif /* USOCKIT_VERSION_H */\n'                               ;  \
+	} > $@
 
 $(object_file_paths): build/$(build_type)/obj/%.o: $(header_file_paths) src/%.c
 	mkdir -p $(@D)
@@ -65,5 +83,5 @@ uninstall:
 .PHONY: uninstall
 
 clean:
-	rm -rf usockit build
+	rm -rf usockit build include/usockit/version.h
 .PHONY: clean
