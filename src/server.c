@@ -619,7 +619,7 @@ static void* usockit_server_thread_routine_accept(void* const arg_ptr) {
 
 		do {
 			unsigned char buffer[1024];
-			const ssize_t readc = read(client_fd, buffer, (sizeof(buffer) / sizeof(*buffer)));
+			const ssize_t readc = read(client_fd, buffer, array_size(buffer));
 
 			if(readc > 0) {
 				const ret_status_t ret_status = write_all(child_stdin_fd, buffer, (size_t)readc);

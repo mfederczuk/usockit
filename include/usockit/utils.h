@@ -24,6 +24,9 @@
                       } while(0)
 
 
+#define array_size(array)  ((size_t)((sizeof (array)) / (sizeof *(array))))
+
+
 cross_support_nodiscard
 static inline bool strequ(const_cstr_t s1, const_cstr_t s2)
 	cross_support_attr_always_inline
