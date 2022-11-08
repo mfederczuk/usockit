@@ -15,6 +15,7 @@ ifeq "$(build_type)" "debug"
   override optimization_flag :=
   override error_flag :=
   override ndebug_flag :=
+  override memtrace3_flag := -lmemtrace3
 else
   ifneq "$(build_type)" "release"
     $(error `build_type` variable must be either 'debug' or 'release' (actual value was '$(build_type)'))
@@ -23,6 +24,7 @@ else
   override optimization_flag := -O2
   override error_flag := -Werror
   override ndebug_flag := -DNDEBUG
+  override memtrace3_flag :=
 endif
 
 
@@ -70,7 +72,7 @@ $(object_file_paths): build/$(build_type)/obj/%.o: $(header_file_paths) src/%.c
 
 build/$(build_type)/bin/artifacts/usockit: $(object_file_paths)
 	mkdir -p $(@D)
-	$(strip $(CC) $(CFLAGS) $^ -o $@ -pthread)
+	$(strip $(CC) $(CFLAGS) $^ -o $@ -pthread $(memtrace3_flag))
 
 usockit: build/$(build_type)/bin/artifacts/usockit
 	ln -sf $< $@
