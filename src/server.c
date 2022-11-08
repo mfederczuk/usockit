@@ -105,6 +105,10 @@ static inline enum usockit_server_ret_status usockit_server_parent(
 	  cross_support_attr_nonnull(3)
 	  cross_support_attr_warn_unused_result;
 
+static inline void usockit_server_wait_for_child_ready(struct usockit_server_child_ready_info* child_ready_info)
+	cross_support_attr_always_inline
+	cross_support_attr_nonnull_all;
+
 static void* usockit_server_thread_routine_child_wait(void* arg) cross_support_attr_nonnull_all;
 
 static void  usockit_server_thread_routine_accept_cleanup_routine(void* arg) cross_support_attr_nonnull_all;
@@ -591,13 +595,7 @@ static void* usockit_server_thread_routine_accept(void* const arg_ptr) {
 	const struct usockit_server_thread_routine_accept_arg arg =
 		*(const struct usockit_server_thread_routine_accept_arg*)arg_ptr;
 
-
-	pthread_mutex_lock(&(arg.child_ready_info->mutex));
-	while(!(arg.child_ready_info->condition)) {
-		pthread_cond_wait(&(arg.child_ready_info->cond), &(arg.child_ready_info->mutex));
-	}
-	pthread_mutex_unlock(&(arg.child_ready_info->mutex));
-
+	usockit_server_wait_for_child_ready(arg.child_ready_info);
 
 	const int child_stdin_fd = *(arg.child_stdin_fd_ptr);
 
@@ -653,17 +651,19 @@ static void* usockit_server_thread_routine_child_wait(void* const arg_ptr) {
 	const struct usockit_server_thread_routine_child_wait_arg arg =
 		*(const struct usockit_server_thread_routine_child_wait_arg*)arg_ptr;
 
-
-	pthread_mutex_lock(&(arg.child_ready_info->mutex));
-	while(!(arg.child_ready_info->condition)) {
-		pthread_cond_wait(&(arg.child_ready_info->cond), &(arg.child_ready_info->mutex));
-	}
-	pthread_mutex_unlock(&(arg.child_ready_info->mutex));
-
+	usockit_server_wait_for_child_ready(arg.child_ready_info);
 
 	waitpid(*(arg.child_pid_ptr), cross_support_nullptr, 0);
 
 	return cross_support_nullptr;
+}
+
+static inline void usockit_server_wait_for_child_ready(struct usockit_server_child_ready_info* const child_ready_info) {
+	pthread_mutex_lock(&(child_ready_info->mutex));
+	while(!(child_ready_info->condition)) {
+		pthread_cond_wait(&(child_ready_info->cond), &(child_ready_info->mutex));
+	}
+	pthread_mutex_unlock(&(child_ready_info->mutex));
 }
 
 static inline enum usockit_server_ret_status usockit_server_parent(
