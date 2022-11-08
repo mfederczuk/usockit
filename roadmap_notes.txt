@@ -1,0 +1,69 @@
+v0.1.0-indev02
+	* when a client is currently connected, signal to additional clients that no data will be accepted from them.
+	  since just closing the client connection on the server side doesn't work, the server needs to send some data, for
+	  now let's send the string "fuck off"
+
+v0.1.0
+	* error handling
+	* build type is detected based on git information:
+	  debug is when:
+	    * git is installed (rationale: development will only happen when git is available on the system)
+	   and
+	    * cwd is a git repository (rationale: development will only happen when in a git repository)
+	   and
+	    * current branch is not master (rationale: development will only happen on non-master branches)
+	   and
+	    * current tag is not not a release tag (rationale: when specifically on a tagged commit, it is high likely that
+	                                                       a release build is requested)
+	  any other case is release build
+	  specifying build_type while invoking make will override the detected type
+
+v0.2.0
+	* server sends to client when child dies
+
+v0.3.0
+	* server sends stdout data of child to client when connected
+
+v0.4.0
+	* signal handlers
+
+v1.0.0
+	* options or config on how to handle usockit server logging and stderr of child
+	  maybe something like this:
+		  --replay-stdout  save the child program's stdout data while no client is connected and when one does, replay the
+		                   entire saved stdout data to the next client
+		  --hide-stdout    do not write the child program's stdout to the client
+
+		  --log=<path>
+		  --stdin-file=<path>
+		  --stdin-fd=<fd>
+		  --stderr-file=<path>
+
+backlog:
+	* protocol
+	  instead of sending raw data back and forth, send messages
+
+	  message types:
+		  * handshake (sever <-> client)
+		    sending versions to check if the protocols are compatible (do we actually need this? there should only ever
+		    be one `usockit` binary on a machine)
+
+		  * fuck off (server -> client)
+		    the server has reached the maximum amount of clients it is willing to accept and an additional client is
+		    trying to connect
+
+		  * raw data (server <-> client)
+
+		  * kill child (server <- client)
+		    the client requests the server to kill the child
+
+		  * child death/terminated (server -> client)
+		    the server informs the client that the child died/terminated, either because the client sent a "kill child"
+		    message or by other means
+
+		  * heartbeat request & -response (server -> client & server <- client)
+
+		    (do we need this?)
+
+		  * status request & -response (server -> client & server <- client)
+		    fetch status of the environment; server itself and the child
