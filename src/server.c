@@ -242,15 +242,16 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 ) {
 	assert(child_program_argv != cross_support_nullptr);
 
+
+
 	errno = 0;
 	struct usockit_server_child_ready_info* const child_ready_info =
-		malloc(sizeof (struct usockit_server_child_ready_info));
+		calloc(1, sizeof (struct usockit_server_child_ready_info));
 	cross_support_if_unlikely(child_ready_info == cross_support_nullptr) {
-		// TODO: malloc(3) error handling
-		perror("malloc(3)");
+		// TODO: calloc(3) error handling
+		perror("calloc(3)");
 		return USOCKIT_SERVER_RET_STATUS_UNKNOWN;
 	}
-	child_ready_info->condition = false;
 
 	errno = pthread_mutex_init(&(child_ready_info->mutex), cross_support_nullptr);
 	if(errno != 0) {
@@ -275,6 +276,9 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 		return USOCKIT_SERVER_RET_STATUS_UNKNOWN;
 	}
 
+	child_ready_info->condition = false;
+
+
 
 	errno = 0;
 	struct usockit_server_thread_routine_child_wait_arg* const child_wait_thread_routine_arg =
@@ -286,8 +290,8 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 		free(child_ready_info);
 		errno_pop();
 
-		// TODO: malloc(3) error handling
-		perror("malloc(3)");
+		// TODO: calloc(3) error handling
+		perror("calloc(3)");
 		return USOCKIT_SERVER_RET_STATUS_UNKNOWN;
 	}
 
@@ -312,6 +316,7 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 	child_wait_thread_routine_arg->child_ready_info = child_ready_info;
 
 
+
 	errno = 0;
 	struct usockit_server_thread_routine_accept_arg* const accept_thread_routine_arg =
 		calloc(1, sizeof (struct usockit_server_thread_routine_accept_arg));
@@ -327,8 +332,8 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 
 		errno_pop();
 
-		// TODO: malloc(3) error handling
-		perror("malloc(3)");
+		// TODO: calloc(3) error handling
+		perror("calloc(3)");
 		return USOCKIT_SERVER_RET_STATUS_UNKNOWN;
 	}
 
@@ -355,6 +360,7 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 
 	accept_thread_routine_arg->child_ready_info = child_ready_info;
 	accept_thread_routine_arg->socket_fd = socket_fd;
+
 
 
 	pthread_t child_wait_thread;
@@ -384,7 +390,6 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 		perror("pthread_create(3)");
 		return USOCKIT_SERVER_RET_STATUS_UNKNOWN;
 	}
-
 
 	pthread_t accept_thread;
 	errno =
@@ -416,6 +421,7 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 		perror("pthread_create(3)");
 		return USOCKIT_SERVER_RET_STATUS_UNKNOWN;
 	}
+
 
 
 	const enum usockit_server_ret_status ret_status =
