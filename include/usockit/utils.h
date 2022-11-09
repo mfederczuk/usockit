@@ -25,7 +25,7 @@
 
 
 cross_support_nodiscard
-static inline bool strequ(const const_cstr_t s1, const const_cstr_t s2)
+static inline bool strequ(const_cstr_t s1, const_cstr_t s2)
 	cross_support_attr_always_inline
 	cross_support_attr_pure
 	cross_support_attr_nonnull_all
@@ -47,7 +47,7 @@ static inline ret_status_t write_all(int fd, const void* buf, size_t count)
 
 
 cross_support_nodiscard
-static inline bool str_empty(const const_cstr_t s)
+static inline bool str_empty(const_cstr_t s)
 	cross_support_attr_always_inline
 	cross_support_attr_pure
 	cross_support_attr_nonnull_all

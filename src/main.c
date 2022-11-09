@@ -20,7 +20,7 @@
 #define USAGE_STRING_CLIENT "<socket_path>"
 
 
-static inline void print_usage(const const_cstr_t argv0)
+static inline void print_usage(const_cstr_t argv0)
 	cross_support_attr_always_inline
 	cross_support_attr_nonnull_all;
 
