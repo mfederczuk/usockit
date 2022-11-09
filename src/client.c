@@ -62,7 +62,7 @@ static inline enum usockit_client_ret_status usockit_client_connect(
 	const const_cstr_t socket_pathname
 ) {
 	struct sockaddr_un addr;
-	memset(&addr, 0, sizeof(addr));
+	zeroset_lvalue(addr);
 
 	addr.sun_family = AF_UNIX;
 	strcpy(addr.sun_path, socket_pathname);

@@ -191,7 +191,7 @@ static inline enum usockit_server_ret_status usockit_server_setup_socket(
 
 	struct sockaddr_un addr;
 
-	memset(&addr, 0, sizeof(addr));
+	zeroset_lvalue(addr);
 
 	addr.sun_family = AF_UNIX;
 	strcpy(addr.sun_path, socket_pathname);
