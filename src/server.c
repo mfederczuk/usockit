@@ -197,7 +197,7 @@ static inline enum usockit_server_ret_status usockit_server_setup_socket(
 	strcpy(addr.sun_path, socket_pathname);
 
 	errno = 0;
-	int ret = bind(socket_fd, (const struct sockaddr*)&addr, sizeof(addr));
+	int ret = bind(socket_fd, (const struct sockaddr*)&addr, sizeof addr);
 	if(ret != 0) {
 		errno_push();
 		close(socket_fd);
@@ -244,7 +244,7 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 
 	errno = 0;
 	struct usockit_server_child_ready_info* const child_ready_info =
-		malloc(sizeof(struct usockit_server_child_ready_info));
+		malloc(sizeof (struct usockit_server_child_ready_info));
 	cross_support_if_unlikely(child_ready_info == cross_support_nullptr) {
 		// TODO: malloc(3) error handling
 		perror("malloc(3)");
@@ -278,7 +278,7 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 
 	errno = 0;
 	struct usockit_server_thread_routine_child_wait_arg* const child_wait_thread_routine_arg =
-		calloc(1, sizeof(struct usockit_server_thread_routine_child_wait_arg));
+		calloc(1, sizeof (struct usockit_server_thread_routine_child_wait_arg));
 	cross_support_if_unlikely(child_wait_thread_routine_arg == cross_support_nullptr) {
 		errno_push();
 		pthread_cond_destroy(&(child_ready_info->cond));
@@ -292,7 +292,7 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 	}
 
 	errno = 0;
-	child_wait_thread_routine_arg->child_pid_ptr = malloc(sizeof(*(child_wait_thread_routine_arg->child_pid_ptr)));
+	child_wait_thread_routine_arg->child_pid_ptr = malloc(sizeof *(child_wait_thread_routine_arg->child_pid_ptr));
 	cross_support_if_unlikely(child_wait_thread_routine_arg->child_pid_ptr == cross_support_nullptr) {
 		errno_push();
 
@@ -314,7 +314,7 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 
 	errno = 0;
 	struct usockit_server_thread_routine_accept_arg* const accept_thread_routine_arg =
-		calloc(1, sizeof(struct usockit_server_thread_routine_accept_arg));
+		calloc(1, sizeof (struct usockit_server_thread_routine_accept_arg));
 	cross_support_if_unlikely(accept_thread_routine_arg == cross_support_nullptr) {
 		errno_push();
 
@@ -333,7 +333,7 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 	}
 
 	errno = 0;
-	accept_thread_routine_arg->child_stdin_fd_ptr = malloc(sizeof(*(accept_thread_routine_arg->child_stdin_fd_ptr)));
+	accept_thread_routine_arg->child_stdin_fd_ptr = malloc(sizeof *(accept_thread_routine_arg->child_stdin_fd_ptr));
 	cross_support_if_unlikely(accept_thread_routine_arg->child_stdin_fd_ptr == cross_support_nullptr) {
 		errno_push();
 
@@ -676,27 +676,27 @@ static inline enum usockit_server_ret_status usockit_server_parent(
 	assert(child_ready_info != cross_support_nullptr);
 
 	struct usockit_server_child_error child_error;
-	ssize_t readc = read(reporting_pipe_read_fd, &child_error, sizeof(child_error));
+	ssize_t readc = read(reporting_pipe_read_fd, &child_error, sizeof child_error);
 
 	switch(readc) {
-		case(0): {
+		case 0: {
 			// EOF; the child successfully called one of the exec(3)-family functions
 			break;
 		}
-		case(sizeof(child_error)): {
+		case sizeof child_error: {
 			// we got data; the child encountered an error
 
 			// *very* unlikely that the child is still alive at this point, but better safe than sorry
 			waitpid(child_pid, cross_support_nullptr, 0);
 
 			switch(child_error.func) {
-				case(USOCKIT_CHILD_ERROR_FUNC_DUP2): {
+				case USOCKIT_CHILD_ERROR_FUNC_DUP2: {
 					// TODO: dup2(2) error handling
 					errno = child_error.func_errno;
 					perror("dup2(2)");
 					return USOCKIT_SERVER_RET_STATUS_UNKNOWN;
 				}
-				case(USOCKIT_CHILD_ERROR_FUNC_EXECVE): {
+				case USOCKIT_CHILD_ERROR_FUNC_EXECVE: {
 					// TODO: execve(2) error handling
 					errno = child_error.func_errno;
 					perror("execve(2)");
@@ -708,7 +708,7 @@ static inline enum usockit_server_ret_status usockit_server_parent(
 			}
 		}
 		default: {
-			// either error when trying to read (readc == -1) or not enough data read (readc < sizeof(child_error))
+			// either error when trying to read (readc == -1) or not enough data read (readc < (sizeof child_error))
 
 			// TODO: kill the child
 
@@ -761,7 +761,7 @@ static inline void usockit_server_child(
 			.func = USOCKIT_CHILD_ERROR_FUNC_DUP2,
 			.func_errno = errno,
 		};
-		write(reporting_pipe_write_fd, &error, sizeof(error));
+		write(reporting_pipe_write_fd, &error, sizeof error);
 		close(reporting_pipe_write_fd);
 		// no error handling here, we just hope that it works >.<
 
@@ -780,7 +780,7 @@ static inline void usockit_server_child(
 		.func = USOCKIT_CHILD_ERROR_FUNC_EXECVE,
 		.func_errno = errno,
 	};
-	write(reporting_pipe_write_fd, &error, sizeof(error));
+	write(reporting_pipe_write_fd, &error, sizeof error);
 	close(reporting_pipe_write_fd);
 	// no error handling here, we just hope that it works >.<
 

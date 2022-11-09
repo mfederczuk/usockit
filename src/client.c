@@ -68,7 +68,7 @@ static inline enum usockit_client_ret_status usockit_client_connect(
 	strcpy(addr.sun_path, socket_pathname);
 
 	errno = 0;
-	const int ret = connect(socket_fd, (const struct sockaddr*)&addr, sizeof(addr));
+	const int ret = connect(socket_fd, (const struct sockaddr*)&addr, sizeof addr);
 	if(ret != 0) {
 		// TODO: connect(2) error handling
 		perror("connect(2)");

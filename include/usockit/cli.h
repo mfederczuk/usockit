@@ -133,7 +133,7 @@ static inline ret_status_t usockit_cli_init_child_program_argv(struct usockit_cl
 	assert(cli != cross_support_nullptr);
 
 	errno = 0;
-	cstr_t* const tmp = malloc(sizeof(*(cli->child_program_argv)) * USOCKIT_CLI_CHILD_PROGRAM_ARGV_INIT_CAPACITY);
+	cstr_t* const tmp = malloc((sizeof *(cli->child_program_argv)) * USOCKIT_CLI_CHILD_PROGRAM_ARGV_INIT_CAPACITY);
 
 	cross_support_if_unlikely(tmp == cross_support_nullptr) {
 		return RET_STATUS_FAILURE;
@@ -167,7 +167,7 @@ static inline ret_status_t usockit_cli_append_child_program_arg(
 		cstr_t* const tmp =
 			realloc(
 				cli->child_program_argv,
-				sizeof(*(cli->child_program_argv)) * new_capacity
+				(sizeof *(cli->child_program_argv)) * new_capacity
 			);
 
 		cross_support_if_unlikely(tmp == cross_support_nullptr) {
@@ -199,7 +199,7 @@ static inline ret_status_t usockit_cli_shrink_to_fit_child_program_argv(struct u
 	cstr_t* const tmp =
 		realloc(
 			cli->child_program_argv,
-			sizeof(*(cli->child_program_argv)) * fitted_capacity
+			(sizeof *(cli->child_program_argv)) * fitted_capacity
 		);
 
 	cross_support_if_unlikely(tmp == cross_support_nullptr) {
