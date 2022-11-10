@@ -29,7 +29,7 @@ INSTALL ?= install
 INSTALL_PROGRAM ?= $(INSTALL)
 
 CFLAGS = $(EXTRA_CFLAGS) -std=c11 $(optimization_flag) \
-         -Wall -Wextra -Wconversion -Werror=infinite-recursion \
+         -Wall -Wextra -Wconversion \
          -pedantic -pedantic-errors -Wpedantic -Werror=pedantic \
          $(ndebug_flag)
 
