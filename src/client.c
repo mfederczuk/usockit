@@ -5,13 +5,19 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <pthread.h>
 #include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
 #include <unistd.h>
 #include <usockit/client.h>
+#include <usockit/client/receiving_thread/receiving_thread.h>
+#include <usockit/client/sending_thread/sending_thread.h>
+#include <usockit/client/threads_result.h>
+#include <usockit/memtrace.h>
 #ifndef NDEBUG
 	#include <usockit/shared.h>
 #endif
@@ -61,6 +67,38 @@ static inline enum usockit_client_ret_status usockit_client_connect(
 	const int socket_fd,
 	const const_cstr_t socket_pathname
 ) {
+	struct usockit_client_threads_result_dest* threads_result_dest_ptr;
+	threads_result_dest_ptr = calloc(1, sizeof *threads_result_dest_ptr);
+	cross_support_if_unlikely(threads_result_dest_ptr == cross_support_nullptr) {
+		// TODO: calloc() error handling
+		perror("calloc");
+		return USOCKIT_CLIENT_RET_STATUS_UNKNOWN;
+	}
+
+	int ret = pthread_mutex_init(&(threads_result_dest_ptr->mutex), cross_support_nullptr);
+	if(ret != 0) {
+		free(threads_result_dest_ptr);
+
+		// TODO: pthread_mutex_init() error handling
+		errno = 0;
+		perror("pthread_mute_init");
+		return USOCKIT_CLIENT_RET_STATUS_UNKNOWN;
+	}
+
+	ret = pthread_cond_init(&(threads_result_dest_ptr->cond), cross_support_nullptr);
+	if(ret != 0) {
+		pthread_mutex_destroy(&(threads_result_dest_ptr->mutex));
+		free(threads_result_dest_ptr);
+
+		// TODO: pthread_cond_init() error handling
+		errno = 0;
+		perror("pthread_cond_init");
+		return USOCKIT_CLIENT_RET_STATUS_UNKNOWN;
+	}
+
+	threads_result_dest_ptr->result.origin = USOCKIT_CLIENT_THREADS_RESULT_ORIGIN_NONE;
+
+
 	struct sockaddr_un addr;
 	zeroset_lvalue(addr);
 
@@ -68,40 +106,127 @@ static inline enum usockit_client_ret_status usockit_client_connect(
 	strcpy(addr.sun_path, socket_pathname);
 
 	errno = 0;
-	const int ret = connect(socket_fd, (const struct sockaddr*)&addr, sizeof addr);
+	ret = connect(socket_fd, (const struct sockaddr*)&addr, sizeof addr);
 	if(ret != 0) {
+		pthread_cond_destroy(&(threads_result_dest_ptr->cond));
+		pthread_mutex_destroy(&(threads_result_dest_ptr->mutex));
+		free(threads_result_dest_ptr);
+
 		// TODO: connect(2) error handling
 		perror("connect(2)");
 		return USOCKIT_CLIENT_RET_STATUS_UNKNOWN;
 	}
 
 
-	do {
-		unsigned char buffer[1024];
-		const ssize_t readc = read(STDIN_FILENO, buffer, (sizeof(buffer) / sizeof(*buffer)));
+	pthread_t receiving_thread;
+	ret_status_t ret_status =
+		usockit_client_receiving_thread_create(
+			&receiving_thread,
+			socket_fd,
+			threads_result_dest_ptr
+		);
+	if(ret_status != RET_STATUS_SUCCESS) {
+		pthread_cond_destroy(&(threads_result_dest_ptr->cond));
+		pthread_mutex_destroy(&(threads_result_dest_ptr->mutex));
+		free(threads_result_dest_ptr);
 
-		if(readc > 0) {
-			const ret_status_t ret_status = write_all(socket_fd, buffer, (size_t)readc);
-			if(ret_status != RET_STATUS_SUCCESS) {
-				// TODO: write(2) error handling
-				perror("write(2)");
-				return USOCKIT_CLIENT_RET_STATUS_UNKNOWN;
+		// TODO: usockit_client_receiving_thread_create() error handling
+		perror("usockit_client_receiving_thread_create");
+		return USOCKIT_CLIENT_RET_STATUS_UNKNOWN;
+	}
+
+	pthread_t sending_thread;
+	ret_status =
+		usockit_client_sending_thread_create(
+			&sending_thread,
+			socket_fd,
+			threads_result_dest_ptr
+		);
+	if(ret_status != RET_STATUS_SUCCESS) {
+		pthread_cancel(receiving_thread);
+		pthread_join(receiving_thread, cross_support_nullptr);
+
+		pthread_cond_destroy(&(threads_result_dest_ptr->cond));
+		pthread_mutex_destroy(&(threads_result_dest_ptr->mutex));
+		free(threads_result_dest_ptr);
+
+		// TODO: usockit_client_sending_thread_create() error handling
+		perror("usockit_client_sending_thread_create");
+		return USOCKIT_CLIENT_RET_STATUS_UNKNOWN;
+	}
+
+
+	struct usockit_client_threads_result threads_result;
+
+	pthread_mutex_lock(&(threads_result_dest_ptr->mutex));
+	while(threads_result_dest_ptr->result.origin == USOCKIT_CLIENT_THREADS_RESULT_ORIGIN_NONE) {
+		pthread_cond_wait(&(threads_result_dest_ptr->cond), &(threads_result_dest_ptr->mutex));
+	}
+
+	threads_result = threads_result_dest_ptr->result;
+
+	// cancel threads while they're still (potentially) waiting on the mutex
+	pthread_cancel(receiving_thread);
+	pthread_cancel(sending_thread);
+
+	pthread_mutex_unlock(&(threads_result_dest_ptr->mutex));
+
+	// join after unlocking mutex so we don't get deadlocks
+	pthread_join(receiving_thread, cross_support_nullptr);
+	pthread_join(sending_thread, cross_support_nullptr);
+
+	// destroy the threads result destination *after* joining with the threads
+	pthread_cond_destroy(&(threads_result_dest_ptr->cond));
+	pthread_mutex_destroy(&(threads_result_dest_ptr->mutex));
+	free(threads_result_dest_ptr);
+
+	switch(threads_result.origin) {
+		case USOCKIT_CLIENT_THREADS_RESULT_ORIGIN_SENDING: {
+			const struct usockit_client_sending_thread_result sending_thread_result =
+				threads_result.thread_union.sending;
+
+			if(sending_thread_result.status == 0) {
+				return USOCKIT_CLIENT_RET_STATUS_SUCCESS_EOF;
 			}
 
-			continue;
-		}
+			errno = sending_thread_result.status;
 
-		if(readc == 0) {
-			// EOF
-			break;
+			switch(sending_thread_result.func) {
+				case USOCKIT_CLIENT_SENDING_THREAD_RESULT_FUNC_READ: {
+					// TODO: read() error handling
+					perror("read");
+					return USOCKIT_CLIENT_RET_STATUS_UNKNOWN;
+				}
+				case USOCKIT_CLIENT_SENDING_THREAD_RESULT_FUNC_WRITE: {
+					// TODO: write() error handling
+					perror("write");
+					return USOCKIT_CLIENT_RET_STATUS_UNKNOWN;
+				}
+				default: {
+					cross_support_unreachable();
+				}
+			}
 		}
+		case USOCKIT_CLIENT_THREADS_RESULT_ORIGIN_RECEIVING: {
+			const struct usockit_client_receiving_thread_result receiving_thread_result =
+				threads_result.thread_union.receiving;
 
-		if(readc < 0) {
-			// TODO: read(2) error handling
-			perror("read(2)");
-			return USOCKIT_CLIENT_RET_STATUS_UNKNOWN;
+			switch(receiving_thread_result.type) {
+				case USOCKIT_CLIENT_RECEIVING_THREAD_RESULT_TYPE_FUCK_OFF: {
+					return USOCKIT_CLIENT_RET_STATUS_SUCCESS_FUCK_OFF;
+				}
+				case USOCKIT_CLIENT_RECEIVING_THREAD_RESULT_TYPE_READ_FAILURE: {
+					// TODO: read() error handling
+					perror("read");
+					return USOCKIT_CLIENT_RET_STATUS_UNKNOWN;
+				}
+				default: {
+					cross_support_unreachable();
+				}
+			}
 		}
-	} while(1);
-
-	return USOCKIT_CLIENT_RET_STATUS_SUCCESS;
+		default: {
+			cross_support_unreachable();
+		}
+	}
 }

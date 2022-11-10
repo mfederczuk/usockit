@@ -8,6 +8,8 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
 #include <usockit/cli.h>
 #include <usockit/client.h>
 #include <usockit/cross_support.h>
@@ -151,8 +153,23 @@ static inline int main_client(const const_cstr_t socket_pathname) {
 	const enum usockit_client_ret_status ret_status = usockit_client(socket_pathname);
 
 	switch(ret_status) {
-		case USOCKIT_CLIENT_RET_STATUS_SUCCESS: {
+		case USOCKIT_CLIENT_RET_STATUS_SUCCESS_EOF: {
 			return 0;
+		}
+		case USOCKIT_CLIENT_RET_STATUS_SUCCESS_FUCK_OFF: {
+			bool joke_msg = false;
+			if(isatty(STDERR_FILENO)) {
+				srand((unsigned int)(time(cross_support_nullptr)));
+				joke_msg = ((rand() % 20) == 0);
+			}
+
+			if(!joke_msg) {
+				fputs("Server rejected connection; maximum amount of clients already connected.\n", stderr);
+			} else {
+				fputs("Server told us to fuck off, they already have enough clients connected... rude.\n", stderr);
+			}
+
+			return 48;
 		}
 		case USOCKIT_CLIENT_RET_STATUS_UNKNOWN: {
 			return 125;
