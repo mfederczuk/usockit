@@ -58,14 +58,26 @@ struct usockit_server_child_ready_info {
 	bool condition;
 	pthread_cond_t cond;
 };
+
 struct usockit_server_thread_routine_child_wait_arg {
 	struct usockit_server_child_ready_info* child_ready_info;
 	pid_t* child_pid_ptr;
 };
+
+struct usockit_server_thread_routine_client_connection_client_ready_info {
+	pthread_mutex_t mutex;
+	int client_fd;
+	pthread_cond_t cond;
+};
+struct usockit_server_thread_routine_client_connection_arg {
+	struct usockit_server_thread_routine_client_connection_client_ready_info* client_ready_info;
+	int* child_stdin_fd_ptr;
+};
+
 struct usockit_server_thread_routine_accept_arg {
 	struct usockit_server_child_ready_info* child_ready_info;
+	struct usockit_server_thread_routine_client_connection_client_ready_info* client_ready_info;
 	int socket_fd;
-	int* child_stdin_fd_ptr;
 };
 
 
@@ -74,6 +86,8 @@ struct usockit_server_thread_routine_accept_arg {
 // `--- usockit_server_setup_socket
 //      `--- usockit_server_setup_threads
 //          `--- usockit_server_thread_routine_child_wait
+//          `--- usockit_server_thread_routine_client_connection
+//          |    `--- usockit_server_thread_routine_client_connection_cleanup_routine
 //          `--- usockit_server_thread_routine_accept
 //          |    `--- usockit_server_thread_routine_accept_cleanup_routine
 //          `--- usockit_server_setup_child
@@ -111,6 +125,9 @@ static inline void usockit_server_wait_for_child_ready(struct usockit_server_chi
 
 static void* usockit_server_thread_routine_child_wait(void* arg) cross_support_attr_nonnull_all;
 
+static void  usockit_server_thread_routine_client_connection_cleanup_routine(void* arg) cross_support_attr_nonnull_all;
+static void* usockit_server_thread_routine_client_connection(void* arg) cross_support_attr_nonnull_all;
+
 static void  usockit_server_thread_routine_accept_cleanup_routine(void* arg) cross_support_attr_nonnull_all;
 static void* usockit_server_thread_routine_accept(void* arg) cross_support_attr_nonnull_all;
 
@@ -120,7 +137,7 @@ static inline enum usockit_server_ret_status usockit_server_setup_child(
 	int socket_fd,
 	struct usockit_server_child_ready_info* child_read_info,
 	pid_t* child_wait_thread_routine_arg_child_pid_ptr,
-	int* accept_thread_routine_arg_child_stdin_fd_ptr,
+	int* client_connection_thread_routine_arg_child_stdin_fd_ptr,
 	pthread_t child_wait_thread,
 	pthread_t accept_thread
 ) cross_support_attr_always_inline
@@ -281,13 +298,73 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 
 
 	errno = 0;
-	struct usockit_server_thread_routine_child_wait_arg* const child_wait_thread_routine_arg =
-		calloc(1, sizeof (struct usockit_server_thread_routine_child_wait_arg));
-	cross_support_if_unlikely(child_wait_thread_routine_arg == cross_support_nullptr) {
+	struct usockit_server_thread_routine_client_connection_client_ready_info* const client_ready_info =
+		calloc(1, sizeof (struct usockit_server_thread_routine_client_connection_client_ready_info));
+	cross_support_if_unlikely(client_ready_info == cross_support_nullptr) {
 		errno_push();
 		pthread_cond_destroy(&(child_ready_info->cond));
 		pthread_mutex_destroy(&(child_ready_info->mutex));
 		free(child_ready_info);
+		errno_pop();
+
+		// TODO: calloc(3) error handling
+		perror("calloc(3)");
+		return USOCKIT_SERVER_RET_STATUS_UNKNOWN;
+	}
+
+	errno = pthread_mutex_init(&(client_ready_info->mutex), cross_support_nullptr);
+	if(errno != 0) {
+		errno_push();
+
+		free(client_ready_info);
+
+		pthread_cond_destroy(&(child_ready_info->cond));
+		pthread_mutex_destroy(&(child_ready_info->mutex));
+		free(child_ready_info);
+
+		errno_pop();
+
+		// TODO: pthread_mutex_init(3p) error handling
+		perror("pthread_mutex_init(3p)");
+		return USOCKIT_SERVER_RET_STATUS_UNKNOWN;
+	}
+
+	errno = pthread_cond_init(&(client_ready_info->cond), cross_support_nullptr);
+	if(errno != 0) {
+		errno_push();
+
+		pthread_mutex_destroy(&(client_ready_info->mutex));
+		free(client_ready_info);
+
+		pthread_cond_destroy(&(child_ready_info->cond));
+		pthread_mutex_destroy(&(child_ready_info->mutex));
+		free(child_ready_info);
+
+		errno_pop();
+
+		// TODO: pthread_mutex_init(3p) error handling
+		perror("pthread_mutex_init(3p)");
+		return USOCKIT_SERVER_RET_STATUS_UNKNOWN;
+	}
+
+	client_ready_info->client_fd = -1;
+
+
+
+	errno = 0;
+	struct usockit_server_thread_routine_child_wait_arg* const child_wait_thread_routine_arg =
+		calloc(1, sizeof(struct usockit_server_thread_routine_child_wait_arg));
+	cross_support_if_unlikely(child_wait_thread_routine_arg == cross_support_nullptr) {
+		errno_push();
+
+		pthread_cond_destroy(&(client_ready_info->cond));
+		pthread_mutex_destroy(&(client_ready_info->mutex));
+		free(client_ready_info);
+
+		pthread_cond_destroy(&(child_ready_info->cond));
+		pthread_mutex_destroy(&(child_ready_info->mutex));
+		free(child_ready_info);
+
 		errno_pop();
 
 		// TODO: calloc(3) error handling
@@ -301,6 +378,10 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 		errno_push();
 
 		free(child_wait_thread_routine_arg);
+
+		pthread_cond_destroy(&(client_ready_info->cond));
+		pthread_mutex_destroy(&(client_ready_info->mutex));
+		free(client_ready_info);
 
 		pthread_cond_destroy(&(child_ready_info->cond));
 		pthread_mutex_destroy(&(child_ready_info->mutex));
@@ -318,13 +399,17 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 
 
 	errno = 0;
-	struct usockit_server_thread_routine_accept_arg* const accept_thread_routine_arg =
-		calloc(1, sizeof (struct usockit_server_thread_routine_accept_arg));
-	cross_support_if_unlikely(accept_thread_routine_arg == cross_support_nullptr) {
+	struct usockit_server_thread_routine_client_connection_arg* const client_connection_thread_routine_arg =
+		calloc(1, sizeof (struct usockit_server_thread_routine_client_connection_arg));
+	cross_support_if_unlikely(client_connection_thread_routine_arg == cross_support_nullptr) {
 		errno_push();
 
 		free(child_wait_thread_routine_arg->child_pid_ptr);
 		free(child_wait_thread_routine_arg);
+
+		pthread_cond_destroy(&(client_ready_info->cond));
+		pthread_mutex_destroy(&(client_ready_info->mutex));
+		free(client_ready_info);
 
 		pthread_cond_destroy(&(child_ready_info->cond));
 		pthread_mutex_destroy(&(child_ready_info->mutex));
@@ -338,14 +423,19 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 	}
 
 	errno = 0;
-	accept_thread_routine_arg->child_stdin_fd_ptr = malloc(sizeof *(accept_thread_routine_arg->child_stdin_fd_ptr));
-	cross_support_if_unlikely(accept_thread_routine_arg->child_stdin_fd_ptr == cross_support_nullptr) {
+	client_connection_thread_routine_arg->child_stdin_fd_ptr =
+		malloc(sizeof *(client_connection_thread_routine_arg->child_stdin_fd_ptr));
+	cross_support_if_unlikely(client_connection_thread_routine_arg->child_stdin_fd_ptr == cross_support_nullptr) {
 		errno_push();
 
-		free(accept_thread_routine_arg);
+		free(client_connection_thread_routine_arg);
 
 		free(child_wait_thread_routine_arg->child_pid_ptr);
 		free(child_wait_thread_routine_arg);
+
+		pthread_cond_destroy(&(client_ready_info->cond));
+		pthread_mutex_destroy(&(client_ready_info->mutex));
+		free(client_ready_info);
 
 		pthread_cond_destroy(&(child_ready_info->cond));
 		pthread_mutex_destroy(&(child_ready_info->mutex));
@@ -358,7 +448,38 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 		return USOCKIT_SERVER_RET_STATUS_UNKNOWN;
 	}
 
+	client_connection_thread_routine_arg->client_ready_info = client_ready_info;
+
+
+
+	errno = 0;
+	struct usockit_server_thread_routine_accept_arg* const accept_thread_routine_arg =
+		calloc(1, sizeof(struct usockit_server_thread_routine_accept_arg));
+	cross_support_if_unlikely(accept_thread_routine_arg == cross_support_nullptr) {
+		errno_push();
+
+		free(client_connection_thread_routine_arg->child_stdin_fd_ptr);
+		free(client_connection_thread_routine_arg);
+
+		free(child_wait_thread_routine_arg->child_pid_ptr);
+		free(child_wait_thread_routine_arg);
+
+		pthread_cond_destroy(&(client_ready_info->cond));
+		pthread_mutex_destroy(&(client_ready_info->mutex));
+		free(client_ready_info);
+
+		pthread_cond_destroy(&(child_ready_info->cond));
+		pthread_mutex_destroy(&(child_ready_info->mutex));
+		free(child_ready_info);
+
+		errno_pop();
+
+		// TODO: calloc(3) error handling
+		perror("calloc(3)");
+		return USOCKIT_SERVER_RET_STATUS_UNKNOWN;
+	}
 	accept_thread_routine_arg->child_ready_info = child_ready_info;
+	accept_thread_routine_arg->client_ready_info = client_ready_info;
 	accept_thread_routine_arg->socket_fd = socket_fd;
 
 
@@ -374,11 +495,54 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 	if(errno != 0) {
 		errno_push();
 
-		free(accept_thread_routine_arg->child_stdin_fd_ptr);
 		free(accept_thread_routine_arg);
+
+		free(client_connection_thread_routine_arg->child_stdin_fd_ptr);
+		free(client_connection_thread_routine_arg);
 
 		free(child_wait_thread_routine_arg->child_pid_ptr);
 		free(child_wait_thread_routine_arg);
+
+		pthread_cond_destroy(&(client_ready_info->cond));
+		pthread_mutex_destroy(&(client_ready_info->mutex));
+		free(client_ready_info);
+
+		pthread_cond_destroy(&(child_ready_info->cond));
+		pthread_mutex_destroy(&(child_ready_info->mutex));
+		free(child_ready_info);
+
+		errno_pop();
+
+		// TODO: pthread_create(3) error handling
+		perror("pthread_create(3)");
+		return USOCKIT_SERVER_RET_STATUS_UNKNOWN;
+	}
+
+	pthread_t client_connection_thread;
+	errno =
+		pthread_create(
+			&client_connection_thread,
+			cross_support_nullptr,
+			&usockit_server_thread_routine_client_connection,
+			client_connection_thread_routine_arg
+		);
+	if(errno != 0) {
+		errno_push();
+
+		pthread_cancel(child_wait_thread);
+		pthread_join(child_wait_thread, cross_support_nullptr);
+
+		free(accept_thread_routine_arg);
+
+		free(client_connection_thread_routine_arg->child_stdin_fd_ptr);
+		free(client_connection_thread_routine_arg);
+
+		free(child_wait_thread_routine_arg->child_pid_ptr);
+		free(child_wait_thread_routine_arg);
+
+		pthread_cond_destroy(&(client_ready_info->cond));
+		pthread_mutex_destroy(&(client_ready_info->mutex));
+		free(client_ready_info);
 
 		pthread_cond_destroy(&(child_ready_info->cond));
 		pthread_mutex_destroy(&(child_ready_info->mutex));
@@ -402,14 +566,23 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 	if(errno != 0) {
 		errno_push();
 
+		pthread_cancel(client_connection_thread);
+		pthread_join(client_connection_thread, cross_support_nullptr);
+
 		pthread_cancel(child_wait_thread);
 		pthread_join(child_wait_thread, cross_support_nullptr);
 
-		free(accept_thread_routine_arg->child_stdin_fd_ptr);
 		free(accept_thread_routine_arg);
+
+		free(client_connection_thread_routine_arg->child_stdin_fd_ptr);
+		free(client_connection_thread_routine_arg);
 
 		free(child_wait_thread_routine_arg->child_pid_ptr);
 		free(child_wait_thread_routine_arg);
+
+		pthread_cond_destroy(&(client_ready_info->cond));
+		pthread_mutex_destroy(&(client_ready_info->mutex));
+		free(client_ready_info);
 
 		pthread_cond_destroy(&(child_ready_info->cond));
 		pthread_mutex_destroy(&(child_ready_info->mutex));
@@ -430,7 +603,7 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 			socket_fd,
 			child_ready_info,
 			child_wait_thread_routine_arg->child_pid_ptr,
-			accept_thread_routine_arg->child_stdin_fd_ptr,
+			client_connection_thread_routine_arg->child_stdin_fd_ptr,
 			child_wait_thread,
 			accept_thread
 		);
@@ -438,14 +611,23 @@ static inline enum usockit_server_ret_status usockit_server_setup_threads(
 	pthread_cancel(accept_thread);
 	pthread_join(accept_thread, cross_support_nullptr);
 
+	pthread_cancel(client_connection_thread);
+	pthread_join(client_connection_thread, cross_support_nullptr);
+
 	pthread_cancel(child_wait_thread);
 	pthread_join(child_wait_thread, cross_support_nullptr);
 
-	free(accept_thread_routine_arg->child_stdin_fd_ptr);
 	free(accept_thread_routine_arg);
+
+	free(client_connection_thread_routine_arg->child_stdin_fd_ptr);
+	free(client_connection_thread_routine_arg);
 
 	free(child_wait_thread_routine_arg->child_pid_ptr);
 	free(child_wait_thread_routine_arg);
+
+	pthread_cond_destroy(&(client_ready_info->cond));
+	pthread_mutex_destroy(&(client_ready_info->mutex));
+	free(client_ready_info);
 
 	pthread_cond_destroy(&(child_ready_info->cond));
 	pthread_mutex_destroy(&(child_ready_info->mutex));
@@ -459,14 +641,14 @@ static inline enum usockit_server_ret_status usockit_server_setup_child(
 	const int socket_fd,
 	struct usockit_server_child_ready_info* const child_read_info,
 	pid_t* const child_wait_thread_routine_arg_child_pid_ptr,
-	int* const accept_thread_routine_arg_child_stdin_fd_ptr,
+	int* const client_connection_thread_routine_arg_child_stdin_fd_ptr,
 	pthread_t child_wait_thread,
 	pthread_t accept_thread
 ) {
 	assert(child_program_argv != cross_support_nullptr);
 	assert(child_read_info != cross_support_nullptr);
 	assert(child_wait_thread_routine_arg_child_pid_ptr != cross_support_nullptr);
-	assert(accept_thread_routine_arg_child_stdin_fd_ptr != cross_support_nullptr);
+	assert(client_connection_thread_routine_arg_child_stdin_fd_ptr != cross_support_nullptr);
 
 	// the main pipe is is used for writing to the child process' stdin
 	int main_pipe[2];
@@ -571,7 +753,7 @@ static inline enum usockit_server_ret_status usockit_server_setup_child(
 		close(main_pipe[PIPE_READ_INDEX]);
 
 		*child_wait_thread_routine_arg_child_pid_ptr = child_pid;
-		*accept_thread_routine_arg_child_stdin_fd_ptr = main_pipe[PIPE_WRITE_INDEX];
+		*client_connection_thread_routine_arg_child_stdin_fd_ptr = main_pipe[PIPE_WRITE_INDEX];
 
 		const enum usockit_server_ret_status ret_status =
 			usockit_server_parent(
@@ -603,8 +785,6 @@ static void* usockit_server_thread_routine_accept(void* const arg_ptr) {
 
 	usockit_server_wait_for_child_ready(arg.child_ready_info);
 
-	const int child_stdin_fd = *(arg.child_stdin_fd_ptr);
-
 	do {
 		errno = 0;
 		int client_fd = accept(arg.socket_fd, cross_support_nullptr, cross_support_nullptr);
@@ -614,21 +794,75 @@ static void* usockit_server_thread_routine_accept(void* const arg_ptr) {
 			continue;
 		}
 
-		// TODO: here we need to spawn yet another thread for the first accepted connection, any subsequent accepted
-		//       connections are immediately closed. in the future we're gonna have a proper protocol where server and
-		//       client send messages to another, and for these subsequent connections we're gonna send the "fuck off"
-		//       message to say that a connection is currently already open.
-		//       just for the joke i actually wan't to call the message type something like
-		//       `USOCKIT_PROTOCOL_MESSAGE_TYPE_FUCK_OFF`
-
+		bool do_cleanup;
 		pthread_cleanup_push(usockit_server_thread_routine_accept_cleanup_routine, &client_fd);
 
 		do {
+			errno = pthread_mutex_trylock(&(arg.client_ready_info->mutex));
+			if(errno != EBUSY) {
+				// client_connection thread currently waiting on the conditional variable
+
+				do_cleanup = false;
+
+				arg.client_ready_info->client_fd = client_fd;
+				pthread_mutex_unlock(&(arg.client_ready_info->mutex));
+
+				pthread_testcancel(); // only cancellation point in this branch
+
+				pthread_cond_signal(&(arg.client_ready_info->cond));
+			} else {
+				// client_connection thread has mutex currently locked, either because the thread is actually working on
+				// an active connection, or because we caught it during a spurious wakeup
+
+				do_cleanup = true;
+
+				if(arg.client_ready_info->client_fd == -1) {
+					// case of spurious wakeup -> try again
+					pthread_testcancel();
+					continue;
+				}
+
+				// case of thread working on connection -> reject new client
+				static const char* const msg = "fuck off";
+				// GCC for some reason still warns about the unused result, even with the void cast.
+				// (Clang properly suppresses it)
+				// unknown if this is a bug or intended behaviour [as at 2022-11-08, GCC version 12.2.1]
+				#define TMP_GCC_DIAGNOSTIC_IGNORED_UNUSED_RESULT_SUPPORTED  CROSS_SUPPORT_GCC_LEAST(4,6)
+				#if TMP_GCC_DIAGNOSTIC_IGNORED_UNUSED_RESULT_SUPPORTED
+					#pragma GCC diagnostic push
+					#pragma GCC diagnostic ignored "-Wunused-result"
+				#endif
+				(void)(write_all(client_fd, msg, strlen(msg)));
+				#if TMP_GCC_DIAGNOSTIC_IGNORED_UNUSED_RESULT_SUPPORTED
+					#pragma GCC diagnostic pop
+				#endif
+			}
+		} while(false);
+
+		pthread_cleanup_pop(do_cleanup ? 1 : 0);
+	} while(true);
+}
+
+static void* usockit_server_thread_routine_client_connection(void* const arg_ptr) {
+	assert(arg_ptr != cross_support_nullptr);
+
+	struct usockit_server_thread_routine_client_connection_arg arg =
+		*(const struct usockit_server_thread_routine_client_connection_arg*)arg_ptr;
+
+	do {
+		pthread_mutex_lock(&(arg.client_ready_info->mutex));
+		while(arg.client_ready_info->client_fd == -1) {
+			pthread_cond_wait(&(arg.client_ready_info->cond), &(arg.client_ready_info->mutex));
+		}
+
+		pthread_cleanup_push(usockit_server_thread_routine_client_connection_cleanup_routine, arg.client_ready_info);
+
+		do {
 			unsigned char buffer[1024];
-			const ssize_t readc = read(client_fd, buffer, array_size(buffer));
+			const ssize_t readc = read(arg.client_ready_info->client_fd, buffer, array_size(buffer));
 
 			if(readc > 0) {
-				const ret_status_t ret_status = write_all(child_stdin_fd, buffer, (size_t)readc);
+				const ret_status_t ret_status = write_all(*(arg.child_stdin_fd_ptr), buffer, (size_t)readc);
 				if(ret_status != RET_STATUS_SUCCESS) {
 					// TODO: write(2) error handling
 					break;
@@ -647,8 +881,20 @@ static void* usockit_server_thread_routine_accept(void* const arg_ptr) {
 
 		pthread_cleanup_pop(1);
 	} while(true);
+}
 
-	return cross_support_nullptr;
+static void usockit_server_thread_routine_client_connection_cleanup_routine(void* const arg) {
+	assert(arg != cross_support_nullptr);
+
+	struct usockit_server_thread_routine_client_connection_client_ready_info* client_ready_info =
+		(struct usockit_server_thread_routine_client_connection_client_ready_info*)arg;
+
+	const int client_fd = client_ready_info->client_fd;
+	client_ready_info->client_fd = -1;
+
+	pthread_mutex_unlock(&(client_ready_info->mutex));
+
+	close(client_fd);
 }
 
 static void* usockit_server_thread_routine_child_wait(void* const arg_ptr) {
