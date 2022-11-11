@@ -13,6 +13,7 @@ build_type = debug
 
 ifeq "$(build_type)" "debug"
   override optimization_flag :=
+  override error_flag :=
   override ndebug_flag :=
 else
   ifneq "$(build_type)" "release"
@@ -20,6 +21,7 @@ else
   endif
 
   override optimization_flag := -O2
+  override error_flag := -Werror
   override ndebug_flag := -DNDEBUG
 endif
 
@@ -29,7 +31,7 @@ INSTALL ?= install
 INSTALL_PROGRAM ?= $(INSTALL)
 
 CFLAGS = $(EXTRA_CFLAGS) -std=c11 $(optimization_flag) \
-         -Wall -Wextra -Wconversion \
+         -Wall -Wextra -Wconversion $(error_flag) \
          -pedantic -pedantic-errors -Wpedantic -Werror=pedantic \
          $(ndebug_flag)
 
