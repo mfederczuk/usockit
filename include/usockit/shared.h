@@ -8,8 +8,8 @@
 
 #include <stddef.h>
 #include <sys/un.h>
+#include <usockit/utils.h>
 
-#define USOCKIT_SOCKET_PATHNAME_MAX_LENGTH \
-	((size_t)((sizeof(((struct sockaddr_un){ 0 }).sun_path) / sizeof(*(((struct sockaddr_un){ 0 }).sun_path))) - 1))
+#define USOCKIT_SOCKET_PATHNAME_MAX_LENGTH  (array_size(((struct sockaddr_un){ 0 }).sun_path) - 1)
 
 #endif /* USOCKIT_SHARED_H */

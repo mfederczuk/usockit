@@ -24,8 +24,14 @@
                       } while(0)
 
 
+#define array_size(array)  ((size_t)((sizeof (array)) / (sizeof *(array))))
+
+
+#define zeroset_lvalue(lvalue)  memset(&(lvalue), 0, sizeof (lvalue))
+
+
 cross_support_nodiscard
-static inline bool strequ(const const_cstr_t s1, const const_cstr_t s2)
+static inline bool strequ(const_cstr_t s1, const_cstr_t s2)
 	cross_support_attr_always_inline
 	cross_support_attr_pure
 	cross_support_attr_nonnull_all
@@ -40,14 +46,7 @@ static inline bool strequ(const const_cstr_t s1, const const_cstr_t s2) {
 
 
 cross_support_nodiscard
-static inline ret_status_t write_all(int fd, const void* buf, size_t count)
-	cross_support_attr_always_inline
-	cross_support_attr_warn_unused_result;
-
-
-
-cross_support_nodiscard
-static inline bool str_empty(const const_cstr_t s)
+static inline bool str_empty(const_cstr_t s)
 	cross_support_attr_always_inline
 	cross_support_attr_pure
 	cross_support_attr_nonnull_all
@@ -60,6 +59,10 @@ static inline bool str_empty(const const_cstr_t s) {
 }
 
 
+cross_support_nodiscard
+static inline ret_status_t write_all(int fd, const void* buf, size_t count)
+	cross_support_attr_always_inline
+	cross_support_attr_warn_unused_result;
 
 static inline ret_status_t write_all(const int fd, const void* const buf, const size_t count) {
 	size_t total_writec = 0;

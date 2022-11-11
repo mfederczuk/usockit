@@ -8,6 +8,8 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
 #include <usockit/cli.h>
 #include <usockit/client.h>
 #include <usockit/cross_support.h>
@@ -20,7 +22,7 @@
 #define USAGE_STRING_CLIENT "<socket_path>"
 
 
-static inline void print_usage(const const_cstr_t argv0)
+static inline void print_usage(const_cstr_t argv0)
 	cross_support_attr_always_inline
 	cross_support_attr_nonnull_all;
 
@@ -151,10 +153,25 @@ static inline int main_client(const const_cstr_t socket_pathname) {
 	const enum usockit_client_ret_status ret_status = usockit_client(socket_pathname);
 
 	switch(ret_status) {
-		case(USOCKIT_CLIENT_RET_STATUS_SUCCESS): {
+		case USOCKIT_CLIENT_RET_STATUS_SUCCESS_EOF: {
 			return 0;
 		}
-		case(USOCKIT_CLIENT_RET_STATUS_UNKNOWN): {
+		case USOCKIT_CLIENT_RET_STATUS_SUCCESS_FUCK_OFF: {
+			bool joke_msg = false;
+			if(isatty(STDERR_FILENO)) {
+				srand((unsigned int)(time(cross_support_nullptr)));
+				joke_msg = ((rand() % 20) == 0);
+			}
+
+			if(!joke_msg) {
+				fputs("Server rejected connection; maximum amount of clients already connected.\n", stderr);
+			} else {
+				fputs("Server told us to fuck off, they already have enough clients connected... rude.\n", stderr);
+			}
+
+			return 48;
+		}
+		case USOCKIT_CLIENT_RET_STATUS_UNKNOWN: {
 			return 125;
 		}
 		// TODO: client error handling
@@ -187,10 +204,10 @@ static inline int main_server(const const_cstr_t argv0, struct usockit_cli* cons
 		);
 
 	switch(server_ret_status) {
-		case(USOCKIT_SERVER_RET_STATUS_SUCCESS): {
+		case USOCKIT_SERVER_RET_STATUS_SUCCESS: {
 			return 0;
 		}
-		case(USOCKIT_SERVER_RET_STATUS_UNKNOWN): {
+		case USOCKIT_SERVER_RET_STATUS_UNKNOWN: {
 			return 125;
 		}
 		// TODO: server error handling

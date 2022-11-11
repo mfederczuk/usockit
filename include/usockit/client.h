@@ -10,7 +10,8 @@
 #include <usockit/support_types.h>
 
 enum usockit_client_ret_status {
-	USOCKIT_CLIENT_RET_STATUS_SUCCESS,
+	USOCKIT_CLIENT_RET_STATUS_SUCCESS_EOF,
+	USOCKIT_CLIENT_RET_STATUS_SUCCESS_FUCK_OFF,
 	USOCKIT_CLIENT_RET_STATUS_UNKNOWN, // TODO: remove this
 };
 
