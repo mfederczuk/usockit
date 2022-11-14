@@ -83,11 +83,25 @@ usockit: build/$(build_type)/bin/artifacts/usockit
 	ln -sf $< $@
 
 install: build/$(build_type)/bin/artifacts/usockit
+ ifeq "$(build_type)" "debug"
+	   @printf '\nWarning: You are about to install the %s build type! Continue? [y/N] ' $(build_type) >&2
+	   @read -r ans && \
+		   case "$$ans" in \
+			   ([yY]*) ;; \
+			   (*) \
+				   printf 'Aborted.\n' >&2; \
+				   false \
+				   ;; \
+		   esac
+ endif
 	mkdir -p $(DESTDIR)$(bindir)
 	$(strip $(INSTALL_PROGRAM) $< $(DESTDIR)$(bindir))
 .PHONY: install
 
 uninstall:
+ ifeq "$(origin build_type)" "command line"
+	   @printf 'Info: Specifying the `build_type` variable when uninstalling has no effect.\n' >&2
+ endif
 	rm -f $(DESTDIR)$(bindir)/usockit
 .PHONY: uninstall
 
