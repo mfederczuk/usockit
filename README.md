@@ -64,8 +64,8 @@ Download & installation must be done manually by cloning this repository and bui
 ```sh
 git clone 'https://github.com/mfederczuk/usockit.git' -o 'usockit' &&
 	cd 'usockit' &&
-	make build_type=release &&
-	sudo make build_type=release install
+	make &&
+	sudo make install
 ```
 
 ## Contributing ##

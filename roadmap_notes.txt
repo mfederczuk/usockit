@@ -1,17 +1,5 @@
 v0.1.0
 	* error handling
-	* build type is detected based on git information:
-	  debug is when:
-	    * git is installed (rationale: development will only happen when git is available on the system)
-	   and
-	    * cwd is a git repository (rationale: development will only happen when in a git repository)
-	   and
-	    * current branch is not master (rationale: development will only happen on non-master branches)
-	   and
-	    * current tag is not not a release tag (rationale: when specifically on a tagged commit, it is high likely that
-	                                                       a release build is requested)
-	  any other case is release build
-	  specifying build_type while invoking make will override the detected type
 
 v0.2.0
 	* server sends to client when child dies

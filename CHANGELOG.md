@@ -11,6 +11,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [**Keep a Changelog v1.0.0**](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [**Semantic Versioning v2.0.0**](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased ##
+
+### Added ###
+
+* The build type is now detected based on the current Git branch that is checked-out
+
 ## [v0.1.0-indev02] - 2022-11-11 ##
 
 [v0.1.0-indev02]: https://github.com/mfederczuk/usockit/releases/tag/v0.1.0-indev02

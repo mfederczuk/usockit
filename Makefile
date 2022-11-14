@@ -9,7 +9,10 @@ exec_prefix = $(prefix)
 bindir = $(exec_prefix)/bin
 
 
-build_type = debug
+build_type != ./detect-build-type
+ifneq "$(.SHELLSTATUS)" "0"
+  $(error 'detect-build-type' script exited with status code $(.SHELLSTATUS))
+endif
 
 ifeq "$(build_type)" "debug"
   override optimization_flag :=
