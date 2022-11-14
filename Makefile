@@ -49,6 +49,24 @@ override object_file_paths := $(source_file_paths:src/%.c=build/$(build_type)/ob
 
 
 override shellquote = '$(subst ','\'',$(1))'
+override log = $(shell $(SHELL) -c $(call shellquote,printf '%s\n' $(call shellquote,$(1))) >&2)
+
+
+$(call log,Build type: '$(build_type)')
+$(call log,)
+$(call log, Programs & program flags:)
+$(call log,  SHELL:            '$(SHELL)')
+$(call log,  CC:               '$(CC)')
+$(call log,  CFLAGS:           '$(strip $(CFLAGS))')
+$(call log,  INSTALL:          '$(INSTALL)')
+$(call log,  INSTALL_PROGRAM:  '$(INSTALL_PROGRAM)')
+$(call log,)
+$(call log, Installation paths:)
+$(call log,  prefix:       '$(prefix)')
+$(call log,  exec_prefix:  '$(exec_prefix)')
+$(call log,  bindir:       '$(bindir)')
+$(call log,  DESTDIR:      '$(DESTDIR)')
+$(call log,)
 
 
 .SUFFIXES:
