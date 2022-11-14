@@ -56,17 +56,19 @@ all: usockit
 include/usockit/version.h: version_name.txt
 	mkdir -p $(@D)
 	{ \
-		printf '/*\n'                                                           && \
-		printf ' * Generated at %s\n' "$$(date)"                                && \
-		printf ' * DO NOT EDIT!\n'                                              && \
-		printf ' */\n'                                                          && \
-		printf '\n'                                                             && \
-		printf '#ifndef USOCKIT_VERSION_H\n'                                    && \
-		printf '#define USOCKIT_VERSION_H\n'                                    && \
-		printf '\n'                                                             && \
-		printf '#define USOCKIT_VERSION_NAME  "%s"\n' "$$(cat version_name.txt)" && \
-		printf '\n'                                                             && \
-		printf '#endif /* USOCKIT_VERSION_H */\n'                               ;  \
+		datetime="$$(date)"                                            && \
+		version_name="$$(cat version_name.txt)"                        && \
+		printf '/*\n'                                                  && \
+		printf ' * Generated at %s\n' "$$datetime"                     && \
+		printf ' * DO NOT EDIT!\n'                                     && \
+		printf ' */\n'                                                 && \
+		printf '\n'                                                    && \
+		printf '#ifndef USOCKIT_VERSION_H\n'                           && \
+		printf '#define USOCKIT_VERSION_H\n'                           && \
+		printf '\n'                                                    && \
+		printf '#define USOCKIT_VERSION_NAME  "%s"\n' "$$version_name" && \
+		printf '\n'                                                    && \
+		printf '#endif /* USOCKIT_VERSION_H */\n'                      ;  \
 	} > $@
 
 $(object_file_paths): build/$(build_type)/obj/%.o: $(header_file_paths) src/%.c
