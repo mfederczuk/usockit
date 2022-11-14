@@ -16,6 +16,7 @@ and this project adheres to [**Semantic Versioning v2.0.0**](https://semver.org/
 ### Added ###
 
 * The build type is now detected based on the current Git branch that is checked-out
+* Support for installing/uninstalling into paths that contain spaces and other special characters
 
 ## [v0.1.0-indev02] - 2022-11-11 ##
 

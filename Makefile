@@ -48,6 +48,9 @@ override source_file_paths != find src -mindepth 1 -type f -name '*.c'
 override object_file_paths := $(source_file_paths:src/%.c=build/$(build_type)/obj/%.o)
 
 
+override shellquote = '$(subst ','\'',$(1))'
+
+
 .SUFFIXES:
 
 all: usockit
@@ -94,15 +97,15 @@ install: build/$(build_type)/bin/artifacts/usockit
 				   ;; \
 		   esac
  endif
-	mkdir -p $(DESTDIR)$(bindir)
-	$(strip $(INSTALL_PROGRAM) $< $(DESTDIR)$(bindir))
+	mkdir -p $(call shellquote,$(DESTDIR)$(bindir))
+	$(strip $(INSTALL_PROGRAM) $< $(call shellquote,$(DESTDIR)$(bindir)))
 .PHONY: install
 
 uninstall:
  ifeq "$(origin build_type)" "command line"
 	   @printf 'Info: Specifying the `build_type` variable when uninstalling has no effect.\n' >&2
  endif
-	rm -f $(DESTDIR)$(bindir)/usockit
+	rm -f $(call shellquote,$(DESTDIR)$(bindir)/usockit)
 .PHONY: uninstall
 
 clean:
