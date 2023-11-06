@@ -52,6 +52,33 @@ override shellquote = '$(subst ','\'',$(1))'
 override log = $(shell $(SHELL) -c $(call shellquote,printf '%s\n' $(call shellquote,$(1))) >&2)
 
 
+color = auto
+
+ifeq "$(color)" "auto"
+  ifeq "$(NO_COLOR)" "" # <https://no-color.org>
+    override color_enabled != $(SHELL) -c 'test -t 2 && case "$$TERM" in (xterm-color|*-256color|xterm-kitty) printf yes ;; esac'
+  else
+    override color_enabled := no
+  endif
+else
+  ifeq "$(color)" "always"
+    override color_enabled := yes
+  else
+    ifeq "$(color)" "never"
+      override color_enabled := no
+    else
+      $(error `color` variable must be either 'auto', 'always' or 'never' (actual value was '$(color)'))
+    endif
+  endif
+endif
+
+ifeq "$(color_enabled)" "yes"
+  $(call log,Color!) # TODO
+else
+  $(call log,No color) # TODO
+endif
+
+
 $(call log,Build type: '$(build_type)')
 $(call log,)
 $(call log, Programs & program flags:)
